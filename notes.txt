@@ -1,0 +1,17 @@
+db to store logs
+records table:
+    owner, amount, user
+
+pref table:
+    owner, default user, /check recent number to return
+
+friends table:
+    owner, friends
+
+/add add a new record
+/remove delete record (accidental add)
+/clear reset to 0
+/check print current debt, and recent 5 (maybe can change thru settings) records
+/receipt ocr receipt split idea
+sanitize input, ignore +, check for - and if int
+tryt except
