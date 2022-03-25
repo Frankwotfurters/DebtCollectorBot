@@ -106,14 +106,17 @@ def add(update: Update, context: CallbackContext):
         # If user gave arguments with the command (for quickAdd):
         friend, amount, desc = quickAdd(update.message.chat_id, context.args)
 
-        if friend is not None:
+        if friend and amount:
             # If successfully added record
             update.message.reply_text(f'Added record: {friend} +{amount}, {desc}')
         else:
-            # If issue with arguments
-            update.message.reply_text('There is an issue with your command!\n\
-                                      Please use the following format:\n\
-                                      /add [name](optional) ')
+            # Incorrect usage
+            update.message.reply_text(f'Usage of quick /add:\n' +
+                                        '\t/add [name](optional) [amount] [description](optional)\n' +
+                                        'Examples:\n' +
+                                        '\t/add Ryan 8.70 Starbucks\n' +
+                                        '\t/add 2 Iced Tea\n' +
+                                        '\t/add 5')
 
         return ConversationHandler.END
     
