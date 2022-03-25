@@ -14,12 +14,12 @@ class DBHelper:
         stmt = "CREATE TABLE IF NOT EXISTS friends (`userID` INT NOT NULL, `friend` VARCHAR(45) NOT NULL, PRIMARY KEY (`userID`), CONSTRAINT `userID` FOREIGN KEY (`userID`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
         self.conn.execute(stmt)
         
-        stmt = "CREATE TABLE IF NOT EXISTS pref (`userID` INT NOT NULL, `default` VARCHAR(45) NULL, `number` INT NULL, PRIMARY KEY (`userID`))"
+        stmt = "CREATE TABLE IF NOT EXISTS pref (`userID` INT NOT NULL, `defaultFriend` VARCHAR(45) NULL, `number` INT NULL, PRIMARY KEY (`userID`))"
         self.conn.execute(stmt)
         
         self.conn.commit()
 
-    def add_record(self, owner, amount, friend=None, desc=""):
+    def add_record(self, owner, friend, amount, desc=""):
         """Add new record to database"""
         if not friend:
             # get default
@@ -49,7 +49,7 @@ class DBHelper:
     def check_records(self, owner, friend):
         """Returns records belonging to the user"""
         # Prepare statement
-        stmt = "SELECT amount, desc FROM records WHERE owner = (?) AND friend = (?)"
+        stmt = "SELECT amount, desc FROM records WHERE owner = (?) AND friend like (?)"
         args = (owner, friend,)
 
         return [x for x in self.conn.execute(stmt, args)]
@@ -59,3 +59,21 @@ class DBHelper:
         stmt = "SELECT friend FROM records WHERE owner = (?)"
         args = (owner,)
         return list(set([x[0] for x in self.conn.execute(stmt, args)]))
+    
+    def check_default(self, owner):
+        """Returns the default friend defined by the user"""
+        # Prepare statement
+        stmt = "SELECT defaultFriend FROM pref WHERE userID = (?)"
+        args = (owner,)
+        return [x for x in self.conn.execute(stmt, args)]
+    
+    def test(self):
+        stmt = "INSERT INTO pref (userID, defaultFriend) VALUES (?, ?)"
+        args = ('1264592652', 'bruh')
+        print([x for x in self.conn.execute(stmt, args)])
+        self.conn.commit()
+        
+    
+db = DBHelper()
+# db.setup()
+print(db.check_default('1264592652'))

@@ -15,3 +15,4 @@ friends table:
 /receipt ocr receipt split idea
 sanitize input, ignore +, check for - and if int
 tryt except
+upper/lower case when adding record, reply menu shows all types
