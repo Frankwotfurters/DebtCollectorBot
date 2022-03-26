@@ -59,6 +59,14 @@ class DBHelper:
 
         return [x for x in res]
 
+    def check_recent(self, owner):
+        """Returns all(?) records of user in reverse order"""
+        # Prepare statement
+        stmt = "SELECT id, owner, amount, friend, desc FROM records WHERE owner = (?)"
+        args = (owner,)
+
+        return reversed([x for x in self.conn.execute(stmt, args)])
+
     def check_records(self, owner, friend):
         """Returns records belonging to the user"""
         # Prepare statement

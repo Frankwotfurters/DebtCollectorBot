@@ -262,17 +262,30 @@ def calc(update: Update, context: CallbackContext):
     del context.user_data["checkFriend"]
 
     return ConversationHandler.END
-    
-def cancel(update: Update, context: CallbackContext) -> int:
-    """Cancels and ends the conversation."""
-    user = update.message.from_user
-    logging.info("User %s canceled the conversation.", user.first_name)
-    update.message.reply_text(
-        'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
-    )
 
-    return ConversationHandler.END
+def delete(update: Update, context: CallbackContext):
+    """Start conversation to delete a single existing record"""
+    # Retrieve recent records
+    data = db.check_recent(update.message.chat_id)
 
+    header = [f'Recent records:']
+    body = [f'[{x[0]}]: {x[3]} {x[2]} {", " + x[4] if x[4] else ""}' for x in data]
+    res = '\n'.join(header + body)
+
+    # Reply with data
+    update.message.reply_text(text=res,
+                              reply_markup=ReplyKeyboardRemove()
+                              )
+
+    # # Prompt user for friend input
+    # update.message.reply_text(
+    #     'Clear records for who?',
+    #     reply_markup=ReplyKeyboardMarkup(
+    #         reply_keyboard, one_time_keyboard=True, input_field_placeholder='Who?'
+    #     ),
+    # )
+
+    return WIPE
 def clear(update: Update, context: CallbackContext):
     """Start conversation to clear existing records for a friend"""
     # Retrieve possible friends
@@ -313,6 +326,16 @@ def wipe(update: Update, context: CallbackContext):
                               )
 
     return ConversationHandler.END
+    
+def cancel(update: Update, context: CallbackContext):
+    """Cancels and ends the conversation."""
+    user = update.message.from_user
+    logging.info("User %s canceled the conversation.", user.first_name)
+    update.message.reply_text(
+        'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
+    )
+
+    return ConversationHandler.END
 
 def unknown(update: Update, context: CallbackContext):
     context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
@@ -326,6 +349,9 @@ def main():
     dispatcher = updater.dispatcher
 
     start_handler = CommandHandler('start', start)
+    dispatcher.add_handler(start_handler)
+
+    start_handler = CommandHandler('delete', delete)
     dispatcher.add_handler(start_handler)
 
     # Conversation Handler for adding records
