@@ -8,7 +8,7 @@ class DBHelper:
     def setup(self):
         print("Creating Tables")
         
-        stmt = "CREATE TABLE IF NOT EXISTS records (`id` INTEGER PRIMARY KEY, `owner` INT NOT NULL, `amount` INT UNSIGNED NOT NULL, `friend` VARCHAR(45) NOT NULL, `desc` VARCHAR(45) NULL, CONSTRAINT `userID` FOREIGN KEY (`owner`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
+        stmt = "CREATE TABLE IF NOT EXISTS records (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `owner` INT NOT NULL, `amount` INT UNSIGNED NOT NULL, `friend` VARCHAR(45) NOT NULL, `desc` VARCHAR(45) NULL, CONSTRAINT `userID` FOREIGN KEY (`owner`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
         self.conn.execute(stmt)
         
         # stmt = "CREATE TABLE IF NOT EXISTS friends (`userID` INT NOT NULL, `friend` VARCHAR(45) NOT NULL, PRIMARY KEY (`userID`), CONSTRAINT `userID` FOREIGN KEY (`userID`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
@@ -35,7 +35,8 @@ class DBHelper:
         # Commit to database
         self.conn.commit()
 
-    def delete_record(self, owner, friend):
+    def clear_record(self, owner, friend):
+        """Clear all records between the user and a specific friend"""
         # Prepare statement
         stmt = "DELETE FROM records WHERE owner = (?) AND friend = (?)"
         args = (owner, friend)
@@ -46,10 +47,11 @@ class DBHelper:
         # Commit to database
         self.conn.commit()
 
-    def delete_specific_record(self, owner, friend):
+    def delete_record(self, owner, id):
+        """Delete a single record by owner and ID"""
         # Prepare statement
-        stmt = "DELETE FROM records WHERE owner = (?) AND friend = (?)"
-        args = (owner, friend)
+        stmt = "DELETE FROM records WHERE owner = (?) AND id = (?)"
+        args = (owner, id)
 
         # Execute statement
         res = self.conn.execute(stmt, args)
@@ -68,10 +70,18 @@ class DBHelper:
         return reversed([x for x in self.conn.execute(stmt, args)])
 
     def check_records(self, owner, friend):
-        """Returns records belonging to the user"""
+        """Returns records between the user and a friend"""
         # Prepare statement
         stmt = "SELECT amount, desc FROM records WHERE owner = (?) AND friend like (?)"
         args = (owner, friend,)
+
+        return [x for x in self.conn.execute(stmt, args)]
+
+    def get_record_by_ID(self, owner, id):
+        """Returns single record by owner and ID"""
+        # Prepare statement
+        stmt = "SELECT id, owner, amount, friend, desc FROM records WHERE owner = (?) AND id = (?)"
+        args = (owner, id)
 
         return [x for x in self.conn.execute(stmt, args)]
 

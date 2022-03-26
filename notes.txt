@@ -24,3 +24,5 @@ total: 1.6800000000000000002?????????????
 add confirmation convo for deleting stuff
 
 create func to prepend a + if positive, or nothing if its negative
+
+validate all input, if they anyhow type stuff thats not in the table do something and dont explode
