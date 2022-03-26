@@ -16,3 +16,7 @@ friends table:
 sanitize input, ignore +, check for - and if int
 tryt except
 upper/lower case when adding record, reply menu shows all types
+
+/add 0.34
+/add 1.34
+total: 1.6800000000000000002?????????????
