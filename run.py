@@ -23,6 +23,7 @@ db = DBHelper()
 FRIEND, AMOUNT, DESC = range(3)
 CALC = 0
 WIPE = 0
+REMOVE, CONFIRMDELETE = range(2)
 
 def isValidName(name):
     """Check if name is suitable"""
@@ -269,7 +270,7 @@ def delete(update: Update, context: CallbackContext):
     data = db.check_recent(update.message.chat_id)
 
     header = [f'Recent records:']
-    body = [f'[{x[0]}]: {x[3]} {x[2]} {", " + x[4] if x[4] else ""}' for x in data]
+    body = [f'{x[0]}) {x[3]} {x[2]} {", " + x[4] if x[4] else ""}' for x in data]
     res = '\n'.join(header + body)
 
     # Reply with data
@@ -277,15 +278,69 @@ def delete(update: Update, context: CallbackContext):
                               reply_markup=ReplyKeyboardRemove()
                               )
 
-    # # Prompt user for friend input
-    # update.message.reply_text(
-    #     'Clear records for who?',
-    #     reply_markup=ReplyKeyboardMarkup(
-    #         reply_keyboard, one_time_keyboard=True, input_field_placeholder='Who?'
-    #     ),
-    # )
+    reply_keyboard = [[x[0] for x in data]]
 
-    return WIPE
+    # Prompt user for friend input
+    update.message.reply_text(
+        'Choose the ID of the record to delete:',
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True, input_field_placeholder='ID'
+        ),
+    )
+
+    return REMOVE
+
+def remove(update: Update, context: CallbackContext):
+    """Retrieve user input and display record to be removed"""
+    # Retrieve user input
+    context.user_data["deleteID"] = update.message.text
+
+    # Get existing record first
+    data = db.get_record_by_ID(update.message.chat_id, context.user_data["deleteID"])
+
+    # Prepare reply keyboard
+    reply_keyboard = [['Yes', 'No']]
+
+    # Prompt user for confirmation
+    update.message.reply_text(
+        'Would you like to delete:\n' +
+        f'{data[0][0]}) {data[0][3]} {data[0][2]} {", " + data[0][4] if data[0][4] else ""}',
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True, input_field_placeholder='Confirmation'
+        ),
+    )
+
+    return CONFIRMDELETE
+
+def confirmDelete(update: Update, context: CallbackContext):
+    """Retrieve confirmation to delete single record"""
+    # Get existing record again
+    data = db.get_record_by_ID(update.message.chat_id, context.user_data["deleteID"])
+
+    # Retrieve user input
+    context.user_data["confirmDelete"] = update.message.text
+
+    # Check user's response
+    if context.user_data["confirmDelete"].lower() == 'yes':
+        # Received confirmation to delete record
+        db.delete_record(update.message.chat_id, context.user_data["deleteID"])
+
+        # Reply user with the record that was deleted
+        update.message.reply_text(text='Deleted record:\n' +
+                                f'{data[0][0]}) {data[0][3]} {data[0][2]} {", " + data[0][4] if data[0][4] else ""}',
+                                reply_markup=ReplyKeyboardRemove()
+                                )
+
+        return ConversationHandler.END
+
+    else:
+        # Anything else will cancel the deletion
+        update.message.reply_text(text='Cancelled deletion.',
+                                reply_markup=ReplyKeyboardRemove()
+                                )
+
+        return ConversationHandler.END
+
 def clear(update: Update, context: CallbackContext):
     """Start conversation to clear existing records for a friend"""
     # Retrieve possible friends
@@ -313,7 +368,7 @@ def wipe(update: Update, context: CallbackContext):
     data = db.check_records(update.message.chat_id, context.user_data["clearFriend"])
 
     # Delete from database
-    db.delete_record(update.message.chat_id, context.user_data["clearFriend"])
+    db.clear_record(update.message.chat_id, context.user_data["clearFriend"])
     logging.info(data)
 
     # Build response
@@ -351,9 +406,6 @@ def main():
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
 
-    start_handler = CommandHandler('delete', delete)
-    dispatcher.add_handler(start_handler)
-
     # Conversation Handler for adding records
     addConv = ConversationHandler(
         entry_points=[CommandHandler('add', add)],
@@ -385,6 +437,17 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel)],
     )
     dispatcher.add_handler(clearConv)
+
+    # Conversation Handler for deleting a single record
+    deleteConv = ConversationHandler(
+        entry_points=[CommandHandler('delete', delete)],
+        states={
+            REMOVE: [MessageHandler(Filters.text & (~ Filters.command), remove)],
+            CONFIRMDELETE: [MessageHandler(Filters.text & (~ Filters.command), confirmDelete)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+    dispatcher.add_handler(deleteConv)
 
     # Handler for unknown commands
     unknown_handler = MessageHandler(Filters.command, unknown)
