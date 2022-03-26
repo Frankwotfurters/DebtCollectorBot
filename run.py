@@ -22,7 +22,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 db = DBHelper()
 FRIEND, AMOUNT, DESC = range(3)
 CALC = 0
-WIPE = 0
+WIPE, CONFIRMCLEAR = range(2)
 REMOVE, CONFIRMDELETE = range(2)
 
 def isValidName(name):
@@ -318,10 +318,10 @@ def confirmDelete(update: Update, context: CallbackContext):
     data = db.get_record_by_ID(update.message.chat_id, context.user_data["deleteID"])
 
     # Retrieve user input
-    context.user_data["confirmDelete"] = update.message.text
+    confirmDelete = update.message.text
 
     # Check user's response
-    if context.user_data["confirmDelete"].lower() == 'yes':
+    if confirmDelete.lower() == 'yes':
         # Received confirmation to delete record
         db.delete_record(update.message.chat_id, context.user_data["deleteID"])
 
@@ -331,6 +331,9 @@ def confirmDelete(update: Update, context: CallbackContext):
                                 reply_markup=ReplyKeyboardRemove()
                                 )
 
+        # Clear cache
+        del context.user_data["deleteID"]
+
         return ConversationHandler.END
 
     else:
@@ -338,6 +341,9 @@ def confirmDelete(update: Update, context: CallbackContext):
         update.message.reply_text(text='Cancelled deletion.',
                                 reply_markup=ReplyKeyboardRemove()
                                 )
+
+        # Clear cache
+        del context.user_data["deleteID"]
 
         return ConversationHandler.END
 
@@ -364,23 +370,65 @@ def wipe(update: Update, context: CallbackContext):
     # Retrieve user input
     context.user_data["clearFriend"] = update.message.text
 
-    # Get existing records first
-    data = db.check_records(update.message.chat_id, context.user_data["clearFriend"])
+    # Prepare reply keyboard
+    reply_keyboard = [['Yes', 'No']]    
 
-    # Delete from database
-    db.clear_record(update.message.chat_id, context.user_data["clearFriend"])
-    logging.info(data)
+    # Prompt user for confirmation
+    update.message.reply_text(
+        f'Would you like to clear all records between you and {context.user_data["clearFriend"]}?',
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True, input_field_placeholder='Confirmation'
+        ),
+    )
 
-    # Build response
-    total = sum([x[0] for x in data])
-    res = f'Cleared ${total} of debt ({len(data)} transactions) from {context.user_data["clearFriend"]}'
 
-    # Reply with data
-    update.message.reply_text(text=res,
-                              reply_markup=ReplyKeyboardRemove()
-                              )
+    return CONFIRMCLEAR
 
-    return ConversationHandler.END
+def confirmClear(update: Update, context: CallbackContext):
+    """Retrieve confirmation to wipe records of friend"""
+    # Retrieve user input
+    confirmClear = update.message.text
+
+    # Check user's response
+    if confirmClear.lower() == 'yes':
+        # Clear records
+        # Get existing records first
+        data = db.check_records(update.message.chat_id, context.user_data["clearFriend"])
+
+        # Delete from database
+        db.clear_record(update.message.chat_id, context.user_data["clearFriend"])
+        logging.info(data)
+
+        # Build response
+        total = sum([x[0] for x in data])
+
+        if len(data) > 1:
+            # Multiple transactions
+            res = f'Cleared ${total} of debt ({len(data)} transactions) from {context.user_data["clearFriend"]}'
+        else:
+            # 0-1 transaction
+            res = f'Cleared ${total} of debt ({len(data)} transaction) from {context.user_data["clearFriend"]}'
+
+        # Reply with data
+        update.message.reply_text(text=res,
+                                reply_markup=ReplyKeyboardRemove()
+                                )
+
+        # Clear cache
+        del context.user_data["clearFriend"]
+
+        return ConversationHandler.END
+
+    else:
+        # Anything else will cancel the operation
+        update.message.reply_text(text='Cancelled clearing of records.',
+                                reply_markup=ReplyKeyboardRemove()
+                                )
+
+        # Clear cache
+        del context.user_data["clearFriend"]
+
+        return ConversationHandler.END
     
 def cancel(update: Update, context: CallbackContext):
     """Cancels and ends the conversation."""
@@ -432,7 +480,8 @@ def main():
     clearConv = ConversationHandler(
         entry_points=[CommandHandler('clear', clear)],
         states={
-            WIPE: [MessageHandler(Filters.text & (~ Filters.command), wipe)]
+            WIPE: [MessageHandler(Filters.text & (~ Filters.command), wipe)],
+            CONFIRMCLEAR: [MessageHandler(Filters.text & (~ Filters.command), confirmClear)]
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
