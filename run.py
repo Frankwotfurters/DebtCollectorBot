@@ -22,6 +22,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 db = DBHelper()
 FRIEND, AMOUNT, DESC = range(3)
 CALC = 0
+WIPE = 0
 
 def isValidName(name):
     """Check if name is suitable"""
@@ -40,18 +41,17 @@ def start(update: Update, context: CallbackContext):
     context.bot.send_message(chat_id=update.effective_chat.id, text="ayo wasshup man")
 
 def quickAdd(chat_id, args):
-    """Add new record with all arguments"""
-    logging.info(args)
-    # /add man 12 bbt
+    """Add new record without starting conversation
+    Example: /add Ryan 12 Pizza"""
     # Check if first argument includes a name
     if isValidName(args[0]):
         friend = args[0]
 
-        # Check amount
+        # Retrieve and validate amount
         if isValidAmount(args[1]):
             amount = args[1]
 
-            # Check for desc
+            # Retrieve and check for desc
             if len(args) > 2:
                 # Desc is the remaining words
                 desc = " ".join(args[2:])
@@ -74,13 +74,17 @@ def quickAdd(chat_id, args):
         amount = args[0]
 
         # Retrieve default friend
-        friend = db.check_default(chat_id)[0][0]
+        result = db.check_default(chat_id)
 
-        logging.info(friend)
+        logging.info(result)
 
-        if not friend:
-            # CHECK IF DEFAULT EXISTS
+        # Check if a default friend is set
+        if not result:
+            # Not set
             return None, amount, None
+        else:
+            # Got default friend
+            friend = result[0][0]
 
         # Check for desc
         if len(args) > 1:
@@ -101,14 +105,22 @@ def quickAdd(chat_id, args):
 
 def add(update: Update, context: CallbackContext):
     """Start conversation to add a new record"""
+    # If user gave arguments with the command (for quickAdd):
     if context.args:
-        logging.info(f"{context.args = }")
-        # If user gave arguments with the command (for quickAdd):
         friend, amount, desc = quickAdd(update.message.chat_id, context.args)
 
+        # Check if command is successful
         if friend and amount:
             # If successfully added record
             update.message.reply_text(f'Added record: {friend} +{amount}, {desc}')
+        elif friend and not amount:
+            # Invalid amount given
+            update.message.reply_text('Please enter a valid amount!\n' +
+                                        'Examples: 4.50, -2, 0.64')
+        elif not friend and amount:
+            # Default friend is not set
+            update.message.reply_text('Please set a default friend to use /add without supplying a name!\n' + 
+                                        '/settings')
         else:
             # Incorrect usage
             update.message.reply_text(f'Usage of quick /add:\n' +
@@ -246,6 +258,9 @@ def calc(update: Update, context: CallbackContext):
                               reply_markup=ReplyKeyboardRemove()
                               )
 
+    # Clear cache
+    del context.user_data["checkFriend"]
+
     return ConversationHandler.END
     
 def cancel(update: Update, context: CallbackContext) -> int:
@@ -255,6 +270,47 @@ def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text(
         'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
     )
+
+    return ConversationHandler.END
+
+def clear(update: Update, context: CallbackContext):
+    """Start conversation to clear existing records for a friend"""
+    # Retrieve possible friends
+    reply_keyboard = [db.check_friends(update.message.chat_id)]
+
+    # Add cancel option
+    reply_keyboard[0].append('/cancel')
+
+    # Prompt user for friend input
+    update.message.reply_text(
+        'Clear records for who?',
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True, input_field_placeholder='Who?'
+        ),
+    )
+
+    return WIPE
+
+def wipe(update: Update, context: CallbackContext):
+    """Retrieve user input and wipe records of friend"""
+    # Retrieve user input
+    context.user_data["clearFriend"] = update.message.text
+
+    # Get existing records first
+    data = db.check_records(update.message.chat_id, context.user_data["clearFriend"])
+
+    # Delete from database
+    db.delete_record(update.message.chat_id, context.user_data["clearFriend"])
+    logging.info(data)
+
+    # Build response
+    total = sum([x[0] for x in data])
+    res = f'Cleared ${total} of debt ({len(data)} transactions) from {context.user_data["clearFriend"]}'
+
+    # Reply with data
+    update.message.reply_text(text=res,
+                              reply_markup=ReplyKeyboardRemove()
+                              )
 
     return ConversationHandler.END
 
@@ -293,6 +349,16 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel)],
     )
     dispatcher.add_handler(checkConv)
+
+    # Conversation Handler for clearing records
+    clearConv = ConversationHandler(
+        entry_points=[CommandHandler('clear', clear)],
+        states={
+            WIPE: [MessageHandler(Filters.text & (~ Filters.command), wipe)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+    dispatcher.add_handler(clearConv)
 
     # Handler for unknown commands
     unknown_handler = MessageHandler(Filters.command, unknown)

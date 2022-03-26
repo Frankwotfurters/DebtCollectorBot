@@ -11,8 +11,8 @@ class DBHelper:
         stmt = "CREATE TABLE IF NOT EXISTS records (`id` INTEGER PRIMARY KEY, `owner` INT NOT NULL, `amount` INT UNSIGNED NOT NULL, `friend` VARCHAR(45) NOT NULL, `desc` VARCHAR(45) NULL, CONSTRAINT `userID` FOREIGN KEY (`owner`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
         self.conn.execute(stmt)
         
-        stmt = "CREATE TABLE IF NOT EXISTS friends (`userID` INT NOT NULL, `friend` VARCHAR(45) NOT NULL, PRIMARY KEY (`userID`), CONSTRAINT `userID` FOREIGN KEY (`userID`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
-        self.conn.execute(stmt)
+        # stmt = "CREATE TABLE IF NOT EXISTS friends (`userID` INT NOT NULL, `friend` VARCHAR(45) NOT NULL, PRIMARY KEY (`userID`), CONSTRAINT `userID` FOREIGN KEY (`userID`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
+        # self.conn.execute(stmt)
         
         stmt = "CREATE TABLE IF NOT EXISTS pref (`userID` INT NOT NULL, `defaultFriend` VARCHAR(45) NULL, `number` INT NULL, PRIMARY KEY (`userID`))"
         self.conn.execute(stmt)
@@ -35,16 +35,29 @@ class DBHelper:
         # Commit to database
         self.conn.commit()
 
-    def delete_record(self, item_text, owner):
+    def delete_record(self, owner, friend):
         # Prepare statement
-        stmt = "DELETE FROM items WHERE description = (?) AND owner = (?)"
-        args = (item_text, owner )
+        stmt = "DELETE FROM records WHERE owner = (?) AND friend = (?)"
+        args = (owner, friend)
 
         # Execute statement
         self.conn.execute(stmt, args)
 
         # Commit to database
         self.conn.commit()
+
+    def delete_specific_record(self, owner, friend):
+        # Prepare statement
+        stmt = "DELETE FROM records WHERE owner = (?) AND friend = (?)"
+        args = (owner, friend)
+
+        # Execute statement
+        res = self.conn.execute(stmt, args)
+
+        # Commit to database
+        self.conn.commit()
+
+        return [x for x in res]
 
     def check_records(self, owner, friend):
         """Returns records belonging to the user"""
@@ -74,6 +87,6 @@ class DBHelper:
         self.conn.commit()
         
     
-db = DBHelper()
-# db.setup()
-print(db.check_default('1264592652'))
+# db = DBHelper()
+# # db.setup()
+# print(db.check_default('1264592652'))
