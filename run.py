@@ -425,12 +425,21 @@ def confirmClear(update: Update, context: CallbackContext):
         # Get existing records first
         data = db.check_records(update.message.chat_id, context.user_data["clearFriend"])
 
+
         # Delete from database
         db.clear_record(update.message.chat_id, context.user_data["clearFriend"])
         logging.info(data)
 
         # Build response
+        header = [f'Deleting records:']
+        body = [f'{formatAmount(x[0])} {x[1]}' for x in data]
+        res = '\n'.join(header + body)
         total = sum([x[0] for x in data])
+
+        # Send user deleted records
+        update.message.reply_text(text=res,
+                                reply_markup=ReplyKeyboardRemove()
+                                )
 
         if len(data) > 1:
             # Multiple transactions
