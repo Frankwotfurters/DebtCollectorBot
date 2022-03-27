@@ -194,7 +194,8 @@ def friend(update: Update, context: CallbackContext):
 
     # Prompt user for amount input
     update.message.reply_text(
-        'How much do they owe you?',
+        'How much do they owe you?\n' +
+        'Or, send /cancel to go back.',
         reply_markup=ReplyKeyboardRemove(),
     )
 
@@ -205,11 +206,22 @@ def amount(update: Update, context: CallbackContext):
     # Retrieve user input
     context.user_data["addAmount"] = update.message.text
 
+    if not isValidAmount(context.user_data["addAmount"]):
+        # If invalid input
+        # Display error
+        update.message.reply_text('Please enter a valid number!')
+
+        # Prompt user for amount input again
+        update.message.reply_text('How much do they owe you?')
+
+        # Repeat this function
+        return AMOUNT
+
     # Prompt user for desc input
     update.message.reply_text(
         'Add a short description! (or skip)',
         reply_markup=ReplyKeyboardMarkup(
-            [['/skip']], one_time_keyboard=True, input_field_placeholder='Skip?'
+            [['/skip', '/cancel']], one_time_keyboard=True, input_field_placeholder='Skip?'
         ),
     )
 
