@@ -473,6 +473,14 @@ def cancel(update: Update, context: CallbackContext):
     """Cancels and ends the conversation."""
     user = update.message.from_user
     logging.info("User %s canceled the conversation.", user.first_name)
+
+    # Get cache entries
+    cache = [x for x in context.user_data]
+
+    # Clear cache
+    for x in cache:
+        del context.user_data[x]
+
     update.message.reply_text(
         'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
     )
