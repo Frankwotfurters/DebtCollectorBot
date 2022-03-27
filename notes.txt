@@ -8,9 +8,6 @@ pref table:
 friends table:
     owner, friends
 
-/add add a new record
-/remove delete record (accidental add)
-/clear reset to 0
 /check print current debt, and recent 5 (maybe can change thru settings) records
 /receipt ocr receipt split idea
 sanitize input, ignore +, check for - and if int
@@ -21,8 +18,5 @@ upper/lower case when adding record, reply menu shows all types
 /add 1.34
 total: 1.6800000000000000002?????????????
 
-add confirmation convo for deleting stuff
-
-create func to prepend a + if positive, or nothing if its negative
 
 validate all input, if they anyhow type stuff thats not in the table do something and dont explode

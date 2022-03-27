@@ -38,6 +38,36 @@ def isValidAmount(amount):
     # Rejects: '12.', '.'
     return bool(re.match('^[-|+]?(0|[1-9]\d*)?(\.\d+)?(?<=\d)$', amount))
 
+def formatAmount(amount):
+    """Formats the amount to start with a + for positive values, or a - for negative values"""
+    # Convert to float
+    try:
+        amount = float(amount)
+    except:
+        return False
+
+    if amount >= 0:
+        # Positive or 0
+        return f'+${amount}'
+
+    # Negative
+    return f'-${abs(amount)}'
+
+def formatTotal(amount):
+    """Formats the total to start with - for negative values, or nothing for positive values"""
+    # Convert to float
+    try:
+        amount = float(amount)
+    except:
+        return False
+
+    if amount >= 0:
+        # Positive or 0
+        return f'${amount}'
+
+    # Negative
+    return f'-${abs(amount)}'
+
 def start(update: Update, context: CallbackContext):
     context.bot.send_message(chat_id=update.effective_chat.id, text="ayo wasshup man")
 
@@ -113,7 +143,7 @@ def add(update: Update, context: CallbackContext):
         # Check if command is successful
         if friend and amount:
             # If successfully added record
-            update.message.reply_text(f'Added record: {friend} +{amount}, {desc}')
+            update.message.reply_text(f'Added record: {friend} {formatAmount(amount)}, {desc}')
         elif friend and not amount:
             # Invalid amount given
             update.message.reply_text('Please enter a valid amount!\n' +
@@ -194,7 +224,7 @@ def desc(update: Update, context: CallbackContext):
     db.add_record(update.message.chat_id, context.user_data["addFriend"], context.user_data["addAmount"], context.user_data["addDesc"])
 
     # Logging and remove on-screen keyboard
-    update.message.reply_text(f'Added record: {context.user_data["addFriend"]} +{context.user_data["addAmount"]}, {context.user_data["addDesc"]}',
+    update.message.reply_text(f'Added record: {context.user_data["addFriend"]} {formatAmount(context.user_data["addAmount"])}, {context.user_data["addDesc"]}',
                               reply_markup=ReplyKeyboardRemove()
                               )
 
@@ -210,10 +240,10 @@ def skipDesc(update: Update, context: CallbackContext):
     context.user_data["addDesc"] = update.message.text
 
     # Send to database
-    db.add_record(update.message.chat_id, context.user_data["addAmount"], context.user_data["addFriend"])
+    db.add_record(update.message.chat_id, context.user_data["addFriend"], context.user_data["addAmount"])
 
     # Logging
-    update.message.reply_text(f'Added record: {context.user_data["addFriend"]} +{context.user_data["addAmount"]}')
+    update.message.reply_text(f'Added record: {context.user_data["addFriend"]} {formatAmount(context.user_data["addAmount"])}')
 
     # Clear data
     del context.user_data["addFriend"]
@@ -250,8 +280,8 @@ def calc(update: Update, context: CallbackContext):
 
     # Build response
     header = [f'Records for {context.user_data["checkFriend"]}:']
-    body = [f'{x[0]} {x[1]}' for x in data]
-    total = [f'Total: ${sum([x[0] for x in data])}']
+    body = [f'{formatAmount(x[0])} {x[1]}' for x in data]
+    total = [f'Total: {formatTotal(sum([x[0] for x in data]))}']
     res = '\n'.join(header + body + total)
 
     # Reply with data
@@ -270,7 +300,7 @@ def delete(update: Update, context: CallbackContext):
     data = db.check_recent(update.message.chat_id)
 
     header = [f'Recent records:']
-    body = [f'{x[0]}) {x[3]} {x[2]} {", " + x[4] if x[4] else ""}' for x in data]
+    body = [f'{x[0]}) {x[3]} {formatAmount(x[2])} {", " + x[4] if x[4] else ""}' for x in data]
     res = '\n'.join(header + body)
 
     # Reply with data
@@ -304,7 +334,7 @@ def remove(update: Update, context: CallbackContext):
     # Prompt user for confirmation
     update.message.reply_text(
         'Would you like to delete:\n' +
-        f'{data[0][0]}) {data[0][3]} {data[0][2]} {", " + data[0][4] if data[0][4] else ""}',
+        f'{data[0][0]}) {data[0][3]} {formatAmount(data[0][2])} {", " + data[0][4] if data[0][4] else ""}',
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True, input_field_placeholder='Confirmation'
         ),
@@ -327,7 +357,7 @@ def confirmDelete(update: Update, context: CallbackContext):
 
         # Reply user with the record that was deleted
         update.message.reply_text(text='Deleted record:\n' +
-                                f'{data[0][0]}) {data[0][3]} {data[0][2]} {", " + data[0][4] if data[0][4] else ""}',
+                                f'{data[0][0]}) {data[0][3]} {formatAmount(data[0][2])} {", " + data[0][4] if data[0][4] else ""}',
                                 reply_markup=ReplyKeyboardRemove()
                                 )
 
@@ -404,10 +434,10 @@ def confirmClear(update: Update, context: CallbackContext):
 
         if len(data) > 1:
             # Multiple transactions
-            res = f'Cleared ${total} of debt ({len(data)} transactions) from {context.user_data["clearFriend"]}'
+            res = f'Cleared {formatTotal(total)} of debt ({len(data)} transactions) from {context.user_data["clearFriend"]}'
         else:
             # 0-1 transaction
-            res = f'Cleared ${total} of debt ({len(data)} transaction) from {context.user_data["clearFriend"]}'
+            res = f'Cleared {formatTotal(total)} of debt ({len(data)} transaction) from {context.user_data["clearFriend"]}'
 
         # Reply with data
         update.message.reply_text(text=res,
