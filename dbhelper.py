@@ -86,10 +86,15 @@ class DBHelper:
         return [x for x in self.conn.execute(stmt, args)]
 
     def check_friends(self, owner):
-        """Returns all previously tabulated friends"""
+        """Returns a lsit of all (unique) previously tabulated friends"""
         stmt = "SELECT friend FROM records WHERE owner = (?)"
         args = (owner,)
-        return list(set([x[0] for x in self.conn.execute(stmt, args)]))
+
+        # Remove duplicate entries
+        friendSet = set([x[0] for x in self.conn.execute(stmt, args)])
+
+        # Return unique entries only (regardless or capitalization)
+        return [item for item in friendSet if item.istitle() or item.title() not in friendSet]
     
     def check_default(self, owner):
         """Returns the default friend defined by the user"""
