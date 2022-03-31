@@ -103,6 +103,30 @@ class DBHelper:
         args = (owner,)
         return [x for x in self.conn.execute(stmt, args)]
     
+    def set_default(self, owner, friend):
+        """Sets default friend of user"""
+        # Prepare statement
+        stmt = "INSERT OR REPLACE INTO `pref` (userID, defaultFriend) VALUES (?, ?)"
+        args = (owner, friend)
+
+        # Execute statement
+        self.conn.execute(stmt, args)
+
+        # Commit to database
+        self.conn.commit()
+
+    def delete_default(self, owner):
+        """Deletes default friend of user"""
+        # Prepare statement
+        stmt = "DELETE FROM `pref` WHERE userID = (?)"
+        args = (owner,)
+
+        # Execute statement
+        self.conn.execute(stmt, args)
+
+        # Commit to database
+        self.conn.commit()
+    
     def test(self):
         stmt = "INSERT INTO pref (userID, defaultFriend) VALUES (?, ?)"
         args = ('1264592652', 'bruh')
@@ -111,5 +135,5 @@ class DBHelper:
         
     
 # db = DBHelper()
-# # db.setup()
-# print(db.check_default('1264592652'))
+# db.setup()
+# print(db.set_default('1264592652', 'asd'))
