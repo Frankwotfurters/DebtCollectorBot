@@ -28,3 +28,4 @@ COMMANDS:
 /check
 /clear
 /delete
+/default

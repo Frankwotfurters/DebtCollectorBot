@@ -24,6 +24,7 @@ FRIEND, AMOUNT, DESC = range(3)
 CALC = 0
 WIPE, CONFIRMCLEAR = range(2)
 REMOVE, CONFIRMDELETE = range(2)
+SETDEFAULT = 0
 
 def isValidName(name):
     """Check if name is suitable"""
@@ -106,8 +107,6 @@ def quickAdd(chat_id, args):
 
         # Retrieve default friend
         result = db.check_default(chat_id)
-
-        logging.info(result)
 
         # Check if a default friend is set
         if not result:
@@ -480,7 +479,66 @@ def confirmClear(update: Update, context: CallbackContext):
         del context.user_data["clearFriend"]
 
         return ConversationHandler.END
+
+def default(update: Update, context: CallbackContext):
+    """Start conversation to set default friend"""
+    # Retrieve current default friend
+    currentDefault = db.check_default(update.message.chat_id)
+
+    # Retrieve possible friends
+    reply_keyboard = [db.check_friends(update.message.chat_id)]
     
+    # Check if default is set
+    if currentDefault:
+        # Already previously set
+        res = f'Your current default friend is **{currentDefault[0][0]}**.'
+        reply_keyboard[0].append('/remove')
+    else:
+        # Not set
+        res = "Your default friend is not set."
+
+    # Add cancel option
+    reply_keyboard[0].append('/cancel')
+
+    # Prompt user for friend input
+    update.message.reply_text(
+        f'{res} Choose one of the following (or enter a new name) to be set as your default friend:',
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True, input_field_placeholder='Who?'
+        ),
+    )
+
+    return SETDEFAULT
+
+def setDefault(update: Update, context: CallbackContext):
+    """Retrieve user input and set default friend"""
+    # Retrieve user input
+    context.user_data["defaultFriend"] = update.message.text
+
+    # Send to database
+    db.set_default(update.message.chat_id, context.user_data["defaultFriend"])
+
+    # Reply user
+    update.message.reply_text(
+        f'Your current friend is now {context.user_data["defaultFriend"]}.',
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    return ConversationHandler.END
+
+def removeDefault(update: Update, context: CallbackContext):
+    """Deletes default friend record"""
+    # Send to database
+    db.delete_default(update.message.chat_id)
+
+    # Reply user
+    update.message.reply_text(
+        'Removed your default friend.',
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    return ConversationHandler.END    
+
 def cancel(update: Update, context: CallbackContext):
     """Cancels and ends the conversation."""
     user = update.message.from_user
@@ -556,6 +614,16 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel)],
     )
     dispatcher.add_handler(deleteConv)
+
+    # Conversation Handler for setting default friend
+    defaultConv = ConversationHandler(
+        entry_points=[CommandHandler('default', default)],
+        states={
+            SETDEFAULT: [MessageHandler(Filters.text & (~ Filters.command), setDefault)]
+        },
+        fallbacks=[CommandHandler('remove', removeDefault), CommandHandler('cancel', cancel)],
+    )
+    dispatcher.add_handler(defaultConv)
 
     # Handler for unknown commands
     unknown_handler = MessageHandler(Filters.command, unknown)
