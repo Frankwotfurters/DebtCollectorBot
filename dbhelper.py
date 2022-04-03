@@ -8,13 +8,13 @@ class DBHelper:
     def setup(self):
         print("Creating Tables")
         
-        stmt = "CREATE TABLE IF NOT EXISTS records (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `owner` INT NOT NULL, `amount` INT UNSIGNED NOT NULL, `friend` VARCHAR(45) NOT NULL, `desc` VARCHAR(45) NULL, CONSTRAINT `userID` FOREIGN KEY (`owner`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
+        stmt = "CREATE TABLE IF NOT EXISTS records (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `owner` INT NOT NULL, `amount` FLOAT UNSIGNED NOT NULL, `friend` VARCHAR(45) NOT NULL, `desc` VARCHAR(45) NULL, CONSTRAINT `userID` FOREIGN KEY (`owner`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
         self.conn.execute(stmt)
         
         # stmt = "CREATE TABLE IF NOT EXISTS friends (`userID` INT NOT NULL, `friend` VARCHAR(45) NOT NULL, PRIMARY KEY (`userID`), CONSTRAINT `userID` FOREIGN KEY (`userID`) REFERENCES `pref` (`userID`) ON DELETE NO ACTION ON UPDATE CASCADE)"
         # self.conn.execute(stmt)
         
-        stmt = "CREATE TABLE IF NOT EXISTS pref (`userID` INT NOT NULL, `defaultFriend` VARCHAR(45) NULL, `number` INT NULL, PRIMARY KEY (`userID`))"
+        stmt = "CREATE TABLE IF NOT EXISTS pref (`userID` INT NOT NULL, `defaultFriend` VARCHAR(45) NULL, PRIMARY KEY (`userID`))"
         self.conn.execute(stmt)
         
         self.conn.commit()
@@ -62,7 +62,7 @@ class DBHelper:
         return [x for x in res]
 
     def check_recent(self, owner):
-        """Returns all(?) records of user in reverse order"""
+        """Returns all records of user in reverse order"""
         # Prepare statement
         stmt = "SELECT id, owner, amount, friend, desc FROM records WHERE owner = (?)"
         args = (owner,)
@@ -86,15 +86,23 @@ class DBHelper:
         return [x for x in self.conn.execute(stmt, args)]
 
     def check_friends(self, owner):
-        """Returns a lsit of all (unique) previously tabulated friends"""
+        """Returns a list of all (unique) previously tabulated friends"""
         stmt = "SELECT friend FROM records WHERE owner = (?)"
         args = (owner,)
-
-        # Remove duplicate entries
-        friendSet = set([x[0] for x in self.conn.execute(stmt, args)])
-
-        # Return unique entries only (regardless or capitalization)
-        return [item for item in friendSet if item.istitle() or item.title() not in friendSet]
+        
+        # Create a set to keep track of seen names and result list to return
+        seen, result = set(), []
+        
+        # For every entry,
+        for friend in self.conn.execute(stmt, args):
+            # If new unique name
+            if friend[0].lower() not in seen:
+                # Add to seen set and append to results
+                seen.add(friend[0].lower())
+                result.append(friend[0])
+                
+        # Returns only unique names regardless of capitalization
+        return result
     
     def check_default(self, owner):
         """Returns the default friend defined by the user"""

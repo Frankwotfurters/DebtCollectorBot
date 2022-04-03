@@ -1,6 +1,6 @@
 import logging
 from telegram.ext import Updater
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update, ParseMode
 from telegram.ext import CallbackContext
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
@@ -58,7 +58,7 @@ def formatTotal(amount):
     """Formats the total to start with - for negative values, or nothing for positive values"""
     # Convert to float
     try:
-        amount = float(amount)
+        amount = round(float(amount), 2)
     except:
         return False
 
@@ -150,7 +150,7 @@ def add(update: Update, context: CallbackContext):
         elif not friend and amount:
             # Default friend is not set
             update.message.reply_text('Please set a default friend to use /add without supplying a name!\n' + 
-                                        '/settings')
+                                        '/default')
         else:
             # Incorrect usage
             update.message.reply_text(f'Usage of quick /add:\n' +
@@ -288,12 +288,17 @@ def calc(update: Update, context: CallbackContext):
 
     # Query database
     data = db.check_records(update.message.chat_id, context.user_data["checkFriend"])
-
-    # Build response
-    header = [f'Records for {context.user_data["checkFriend"]}:']
-    body = [f'{formatAmount(x[0])} {x[1]}' for x in data]
-    total = [f'Total: {formatTotal(sum([x[0] for x in data]))}']
-    res = '\n'.join(header + body + total)
+    
+    if data:
+        # If records exist, build response
+        header = [f'{len(data)} record(s) found for {context.user_data["checkFriend"]}:']
+        body = [f'{formatAmount(x[0])} {x[1]}' for x in data]
+        total = [f'Total: {formatTotal(sum([x[0] for x in data]))}']
+        res = '\n'.join(header + body + total)
+        
+    else:
+        # If no records of queried friend
+        res = f'No records found for {context.user_data["checkFriend"]}.'
 
     # Reply with data
     update.message.reply_text(text=res,
@@ -319,9 +324,12 @@ def delete(update: Update, context: CallbackContext):
                               reply_markup=ReplyKeyboardRemove()
                               )
 
-    reply_keyboard = [[x[0] for x in data]]
+    # Prepare reply keyboard
 
-    # Prompt user for friend input
+    reply_keyboard = [[x.split(')')[0] for x in body]]
+    reply_keyboard[0].append('/cancel')
+
+    # Prompt user for ID input
     update.message.reply_text(
         'Choose the ID of the record to delete:',
         reply_markup=ReplyKeyboardMarkup(
@@ -338,6 +346,14 @@ def remove(update: Update, context: CallbackContext):
 
     # Get existing record first
     data = db.get_record_by_ID(update.message.chat_id, context.user_data["deleteID"])
+
+    if not data:
+        # Record does not exist / not owned by user
+        # Prompt user for reply again
+        update.message.reply_text('ID not found! Please try again:')
+
+        # Repeat this function
+        return REMOVE
 
     # Prepare reply keyboard
     reply_keyboard = [['Yes', 'No']]
@@ -411,6 +427,22 @@ def wipe(update: Update, context: CallbackContext):
     # Retrieve user input
     context.user_data["clearFriend"] = update.message.text
 
+    # Check for records
+    data = db.check_records(update.message.chat_id, context.user_data["clearFriend"])
+
+    # Build response
+    header = [f'You are deleting:']
+    body = [f'{formatAmount(x[0])} {x[1]}' for x in data]
+    res = '\n'.join(header + body)
+
+    # Save total amount
+    context.user_data["clearTotal"] = (sum([x[0] for x in data]), len(data))
+
+    # Send user deleted records
+    update.message.reply_text(text=res,
+                            reply_markup=ReplyKeyboardRemove()
+                            )
+
     # Prepare reply keyboard
     reply_keyboard = [['Yes', 'No']]    
 
@@ -432,32 +464,17 @@ def confirmClear(update: Update, context: CallbackContext):
 
     # Check user's response
     if confirmClear.lower() == 'yes':
-        # Clear records
-        # Get existing records first
-        data = db.check_records(update.message.chat_id, context.user_data["clearFriend"])
-
-
         # Delete from database
         db.clear_record(update.message.chat_id, context.user_data["clearFriend"])
-        logging.info(data)
 
-        # Build response
-        header = [f'Deleting records:']
-        body = [f'{formatAmount(x[0])} {x[1]}' for x in data]
-        res = '\n'.join(header + body)
-        total = sum([x[0] for x in data])
+        records = context.user_data["clearTotal"][1]
 
-        # Send user deleted records
-        update.message.reply_text(text=res,
-                                reply_markup=ReplyKeyboardRemove()
-                                )
-
-        if len(data) > 1:
+        if records > 1:
             # Multiple transactions
-            res = f'Cleared {formatTotal(total)} of debt ({len(data)} transactions) from {context.user_data["clearFriend"]}'
+            res = f'Cleared {formatTotal(context.user_data["clearTotal"][0])} of debt ({records} transactions) from {context.user_data["clearFriend"]}'
         else:
             # 0-1 transaction
-            res = f'Cleared {formatTotal(total)} of debt ({len(data)} transaction) from {context.user_data["clearFriend"]}'
+            res = f'Cleared {formatTotal(context.user_data["clearTotal"][0])} of debt ({records} transaction) from {context.user_data["clearFriend"]}'
 
         # Reply with data
         update.message.reply_text(text=res,
@@ -466,6 +483,7 @@ def confirmClear(update: Update, context: CallbackContext):
 
         # Clear cache
         del context.user_data["clearFriend"]
+        del context.user_data["clearTotal"]
 
         return ConversationHandler.END
 
@@ -491,21 +509,22 @@ def default(update: Update, context: CallbackContext):
     # Check if default is set
     if currentDefault:
         # Already previously set
-        res = f'Your current default friend is **{currentDefault[0][0]}**.'
+        res = f'Your current default friend is *{currentDefault[0][0]}*\.'
         reply_keyboard[0].append('/remove')
     else:
         # Not set
-        res = "Your default friend is not set."
+        res = "Your default friend is not set\."
 
     # Add cancel option
     reply_keyboard[0].append('/cancel')
 
     # Prompt user for friend input
     update.message.reply_text(
-        f'{res} Choose one of the following (or enter a new name) to be set as your default friend:',
+        f'{res} Choose one of the following \(or enter a new name\) to be set as your default friend:',
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True, input_field_placeholder='Who?'
         ),
+        parse_mode='MarkdownV2'
     )
 
     return SETDEFAULT
@@ -520,8 +539,9 @@ def setDefault(update: Update, context: CallbackContext):
 
     # Reply user
     update.message.reply_text(
-        f'Your current friend is now {context.user_data["defaultFriend"]}.',
-        reply_markup=ReplyKeyboardRemove()
+        f'Your current friend is now *{context.user_data["defaultFriend"]}*\.',
+        reply_markup=ReplyKeyboardRemove(),
+        parse_mode='MarkdownV2'
     )
 
     return ConversationHandler.END
@@ -552,7 +572,7 @@ def cancel(update: Update, context: CallbackContext):
         del context.user_data[x]
 
     update.message.reply_text(
-        'Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove()
+        'Cancelled request.', reply_markup=ReplyKeyboardRemove()
     )
 
     return ConversationHandler.END
