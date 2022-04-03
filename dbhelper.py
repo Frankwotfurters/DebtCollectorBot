@@ -66,8 +66,12 @@ class DBHelper:
         # Prepare statement
         stmt = "SELECT id, owner, amount, friend, desc FROM records WHERE owner = (?)"
         args = (owner,)
+        
+        res = [x for x in self.conn.execute(stmt, args)]
 
-        return reversed([x for x in self.conn.execute(stmt, args)])
+        if res:
+            return reversed(res)
+        return None
 
     def check_records(self, owner, friend):
         """Returns records between the user and a friend"""

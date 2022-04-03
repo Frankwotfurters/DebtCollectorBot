@@ -13,7 +13,9 @@ from telegram.ext import (
     CallbackContext,
 )
 from dbhelper import DBHelper
+from dotenv import load_dotenv
 import re
+import os
 
 # Logging config
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -315,6 +317,17 @@ def delete(update: Update, context: CallbackContext):
     # Retrieve recent records
     data = db.check_recent(update.message.chat_id)
 
+    # No records found
+    if data is None:
+        update.message.reply_text(text=f'You have not added any records!\n' +
+                                  'Start with /add.',
+                                reply_markup=ReplyKeyboardRemove()
+                                )
+
+        # End the conversation
+        return ConversationHandler.END
+
+    # Craft response
     header = [f'Recent records:']
     body = [f'{x[0]}) {x[3]} {formatAmount(x[2])} {", " + x[4] if x[4] else ""}' for x in data]
     res = '\n'.join(header + body)
@@ -325,7 +338,6 @@ def delete(update: Update, context: CallbackContext):
                               )
 
     # Prepare reply keyboard
-
     reply_keyboard = [[x.split(')')[0] for x in body]]
     reply_keyboard[0].append('/cancel')
 
@@ -584,10 +596,15 @@ def main():
     """Run the bot"""
     # Perform first time setup of database
     db.setup()
-
-    updater = Updater(token='***REMOVED***', use_context=True)
+    
+    # Load env file to retrive bot token
+    load_dotenv('.env')
+    
+    # Initialize telegram bot updater and dispatcher
+    updater = Updater(token=os.getenv('BOT_TOKEN'), use_context=True)
     dispatcher = updater.dispatcher
 
+    # Command handlers
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
 
