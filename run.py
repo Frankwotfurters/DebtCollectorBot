@@ -483,10 +483,10 @@ def confirmClear(update: Update, context: CallbackContext):
 
         if records > 1:
             # Multiple transactions
-            res = f'Cleared {formatTotal(context.user_data["clearTotal"][0])} of debt ({records} transactions) from {context.user_data["clearFriend"]}'
+            res = f'Cleared {formatTotal(context.user_data["clearTotal"][0])} of debt ({records} transactions) from {context.user_data["clearFriend"]}.'
         else:
             # 0-1 transaction
-            res = f'Cleared {formatTotal(context.user_data["clearTotal"][0])} of debt ({records} transaction) from {context.user_data["clearFriend"]}'
+            res = f'Cleared {formatTotal(context.user_data["clearTotal"][0])} of debt ({records} transaction) from {context.user_data["clearFriend"]}.'
 
         # Reply with data
         update.message.reply_text(text=res,
@@ -551,7 +551,7 @@ def setDefault(update: Update, context: CallbackContext):
 
     # Reply user
     update.message.reply_text(
-        f'Your current friend is now *{context.user_data["defaultFriend"]}*\.',
+        f'Your default friend is now *{context.user_data["defaultFriend"]}*\.',
         reply_markup=ReplyKeyboardRemove(),
         parse_mode='MarkdownV2'
     )
