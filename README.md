@@ -1,5 +1,7 @@
 # DebtCollectorBot
  Telegram bot to keep track of your debts!
+ 
+<img src="https://github.com/Frankwotfurters/DebtCollectorBot/blob/main/demo/Demo.gif" width="100%">
 ![Demo Gif](https://github.com/Frankwotfurters/DebtCollectorBot/blob/main/demo/Demo.gif)
 
 Usage:
@@ -13,4 +15,6 @@ Can also be done in one line. Example: /add Bob 15 Pizza
 /delete - Delete a specific record.
 
 /default - Sets your default friend. Enables you to use /add without specifying your friend's name.
+
 ![Default Friend Demo Gif](https://github.com/Frankwotfurters/DebtCollectorBot/blob/main/demo/DefaultDemo.gif)
+<img src="https://github.com/Frankwotfurters/DebtCollectorBot/blob/main/demo/DefaultDemo.gif" width="100%">
