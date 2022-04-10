@@ -623,11 +623,13 @@ def main():
     # Perform first time setup of database
     db.setup()
     
-    # Load env file to retrive bot token
+    # Load env file and retrive bot token and port
     load_dotenv('.env')
+    TOKEN = os.getenv('BOT_TOKEN')
+    PORT = os.getenv('BOT_PORT')
     
     # Initialize telegram bot updater and dispatcher
-    updater = Updater(token=os.getenv('BOT_TOKEN'), use_context=True)
+    updater = Updater(token=TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
     # Command handlers
@@ -699,7 +701,10 @@ def main():
     dispatcher.add_handler(unknown_handler)
 
     # Start the bot and wait for response
-    updater.start_polling()
+    updater.start_webhook(listen="0.0.0.0",
+                            port=int(PORT),
+                            url_path=TOKEN)
+    updater.bot.setWebhook('https://vast-waters-99826.herokuapp.com/' + TOKEN)
     updater.idle()
     
 if __name__ == "__main__":
