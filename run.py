@@ -631,7 +631,7 @@ def main():
     PORT = 42102
     
     # Initialize telegram bot updater and dispatcher
-    updater = Updater(token=TOKEN, use_context=True)
+    updater = Updater(token="2120538784:AAG7yn55iR4rpvK6J1Lm_E6cv7KvBK0wV7E", use_context=True)
     dispatcher = updater.dispatcher
 
     # Command handlers
