@@ -625,8 +625,10 @@ def main():
     
     # Load env file and retrive bot token and port
     load_dotenv('.env')
-    TOKEN = os.getenv('BOT_TOKEN')
-    PORT = os.getenv('BOT_PORT')
+    # TOKEN = os.getenv('BOT_TOKEN')
+    # PORT = os.getenv('BOT_PORT')
+    TOKEN = "2120538784:AAG7yn55iR4rpvK6J1Lm_E6cv7KvBK0wV7E"
+    PORT = 42102
     
     # Initialize telegram bot updater and dispatcher
     updater = Updater(token=TOKEN, use_context=True)
