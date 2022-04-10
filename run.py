@@ -72,7 +72,33 @@ def formatTotal(amount):
     return f'-${abs(amount)}'
 
 def start(update: Update, context: CallbackContext):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="ayo wasshup man")
+    # Help menu
+    res = """
+__*Welcome to the Debt Collector Bot\!*__
+Here are the available commands:
+
+/start or /help \- Display this menu\.
+
+/add \- Add a new record\. Can also be done in one line\. Example: /add Bob 15 Pizza
+
+/check \- Check existing records and total between you and a friend\.
+
+/clear \- Clear all records between you and a friend\.
+
+/delete \- Delete a specific record\.
+
+/default \- Sets your default friend\. Enables you to use /add without specifying your friend's name\.
+
+/github \- View the open\-source code behind this bot on GitHub\.
+    """
+    context.bot.send_message(chat_id=update.effective_chat.id, text=res, parse_mode='MarkdownV2')
+
+def github(update: Update, context: CallbackContext):
+    # Display github repo
+    res = """
+    Check out the code behind this bot at https://github.com/Frankwotfurters/DebtCollectorBot
+    """
+    context.bot.send_message(chat_id=update.effective_chat.id, text=res)
 
 def quickAdd(chat_id, args):
     """Add new record without starting conversation
@@ -607,6 +633,12 @@ def main():
     # Command handlers
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
+
+    help_handler = CommandHandler('help', start)
+    dispatcher.add_handler(help_handler)
+
+    github_handler = CommandHandler('github', github)
+    dispatcher.add_handler(github_handler)
 
     # Conversation Handler for adding records
     addConv = ConversationHandler(
