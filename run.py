@@ -703,11 +703,7 @@ def main():
     dispatcher.add_handler(unknown_handler)
 
     # Start the bot and wait for response
-    updater.start_webhook(listen="0.0.0.0",
-                            port=int(PORT),
-                            url_path=TOKEN,
-                            webhook_url = 'https://vast-waters-99826.herokuapp.com/' + TOKEN)
-    updater.idle()
+    updater.start_polling()
     
 if __name__ == "__main__":
     main()
