@@ -1,6 +1,6 @@
 import logging
 from telegram.ext import Updater
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update, ParseMode
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update, Bot
 from telegram.ext import CallbackContext
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
@@ -12,21 +12,117 @@ from telegram.ext import (
     ConversationHandler,
     CallbackContext,
 )
-from dbhelper import DBHelper
 from dotenv import load_dotenv
 import re
 import os
+from os.path import join, dirname
+from dbhelper import DBHelper
 
 # Logging config
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
 
-db = DBHelper()
+# Setup conversation checkpoints
 FRIEND, AMOUNT, DESC = range(3)
 CALC = 0
 WIPE, CONFIRMCLEAR = range(2)
 REMOVE, CONFIRMDELETE = range(2)
 SETDEFAULT = 0
+
+# Retrieve bot token
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+TOKEN = os.environ.get('BOT_TOKEN')
+updater = Updater(token=TOKEN, use_context=True)
+dispatcher = updater.dispatcher
+
+db = DBHelper()
+
+# def lambda_handler(event, context):
+    
+# # Initialize telegram bot updater and dispatcher
+#     updater = Updater(token=TOKEN, use_context=True)
+#     dispatcher = updater.dispatcher
+
+#     # Command handlers
+#     start_handler = CommandHandler('start', start)
+#     dispatcher.add_handler(start_handler)
+
+#     help_handler = CommandHandler('help', start)
+#     dispatcher.add_handler(help_handler)
+
+#     github_handler = CommandHandler('github', github)
+#     dispatcher.add_handler(github_handler)
+
+#     # Conversation Handler for adding records
+#     addConv = ConversationHandler(
+#         entry_points=[CommandHandler('add', add)],
+#         states={
+#             FRIEND: [MessageHandler(Filters.text & (~ Filters.command), friend)],
+#             AMOUNT: [MessageHandler(Filters.text & (~ Filters.command), amount)],
+#             DESC: [MessageHandler(Filters.text & (~ Filters.command), desc)]
+#         },
+#         fallbacks=[CommandHandler('skip', skipDesc), CommandHandler('cancel', cancel)],
+#     )
+#     dispatcher.add_handler(addConv)
+
+#     # Conversation Handler for checking records
+#     checkConv = ConversationHandler(
+#         entry_points=[CommandHandler('check', check)],
+#         states={
+#             CALC: [MessageHandler(Filters.text & (~ Filters.command), calc)]
+#         },
+#         fallbacks=[CommandHandler('cancel', cancel)],
+#     )
+#     dispatcher.add_handler(checkConv)
+
+#     # Conversation Handler for clearing records
+#     clearConv = ConversationHandler(
+#         entry_points=[CommandHandler('clear', clear)],
+#         states={
+#             WIPE: [MessageHandler(Filters.text & (~ Filters.command), wipe)],
+#             CONFIRMCLEAR: [MessageHandler(Filters.text & (~ Filters.command), confirmClear)]
+#         },
+#         fallbacks=[CommandHandler('cancel', cancel)],
+#     )
+#     dispatcher.add_handler(clearConv)
+
+#     # Conversation Handler for deleting a single record
+#     deleteConv = ConversationHandler(
+#         entry_points=[CommandHandler('delete', delete)],
+#         states={
+#             REMOVE: [MessageHandler(Filters.text & (~ Filters.command), remove)],
+#             CONFIRMDELETE: [MessageHandler(Filters.text & (~ Filters.command), confirmDelete)]
+#         },
+#         fallbacks=[CommandHandler('cancel', cancel)],
+#     )
+#     dispatcher.add_handler(deleteConv)
+
+#     # Conversation Handler for setting default friend
+#     defaultConv = ConversationHandler(
+#         entry_points=[CommandHandler('default', default)],
+#         states={
+#             SETDEFAULT: [MessageHandler(Filters.text & (~ Filters.command), setDefault)]
+#         },
+#         fallbacks=[CommandHandler('remove', removeDefault), CommandHandler('cancel', cancel)],
+#     )
+#     dispatcher.add_handler(defaultConv)
+
+#     # Handler for unknown commands
+#     unknown_handler = MessageHandler(Filters.command, unknown)
+#     dispatcher.add_handler(unknown_handler)
+
+#     try:
+#         # Process user input
+#         dispatcher.process_update(
+#             Update.de_json(json.loads(event["body"]), bot)
+#         )
+
+#     except Exception as e:
+#         print(e)
+#         return {"statusCode": 500}
+
+#     return {"statusCode": 200}
 
 def isValidName(name):
     """Check if name is suitable"""
@@ -182,11 +278,12 @@ def add(update: Update, context: CallbackContext):
         else:
             # Incorrect usage
             update.message.reply_text(f'Usage of quick /add:\n' +
-                                        '\t/add [name](optional) [amount] [description](optional)\n' +
+                                        '\t\t/add [name](optional) [amount] [description](optional)\n' +
                                         'Examples:\n' +
-                                        '\t/add Ryan 8.70 Starbucks\n' +
-                                        '\t/add 2 Iced Tea\n' +
-                                        '\t/add 5')
+                                        '\t\t/add Ryan 8.70 Starbucks\n' +
+                                        '\t\t/add 2 Iced Tea\n' +
+                                        '\t\t/add 5\n' +
+                                        'Note: Names cannot contain any numbers.')
 
         return ConversationHandler.END
     
@@ -623,15 +720,8 @@ def main():
     # Perform first time setup of database
     db.setup()
     
-    # Load env file and retrive bot token and port
-    load_dotenv('.env')
-    # TOKEN = os.getenv('BOT_TOKEN')
-    # PORT = os.getenv('BOT_PORT')
-    TOKEN = "2120538784:AAG7yn55iR4rpvK6J1Lm_E6cv7KvBK0wV7E"
-    PORT = 42102
-    
     # Initialize telegram bot updater and dispatcher
-    updater = Updater(token="2120538784:AAG7yn55iR4rpvK6J1Lm_E6cv7KvBK0wV7E", use_context=True)
+    updater = Updater(token=TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
     # Command handlers
